@@ -50,6 +50,21 @@ func _ready():
 	initial_delay.timeout.connect(func(): make_decision())
 	initial_delay.start()
 
+# 辅助函数：安全地解析API响应
+func safe_parse_response(api_type: String, response: Variant, character_name: String = "") -> String:
+	if not response:
+		print("[AIAgent] %s 的JSON解析失败：响应为空" % character_name)
+		return ""
+	
+	# 确保response是Dictionary类型
+	if not (response is Dictionary):
+		print("[AIAgent] %s 的JSON解析失败：响应不是Dictionary类型，而是 %s" % [character_name, typeof(response)])
+		print("[AIAgent] 响应内容：", response)
+		return ""
+	
+	# 使用APIConfig统一解析响应
+	return APIConfig.parse_response(api_type, response, character_name)
+
 # 切换玩家控制状态
 func toggle_player_control(enabled: bool):
 	is_player_controlled = enabled
@@ -570,15 +585,11 @@ func _on_decision_request_completed(result, _response_code, headers, body, char_
 		return
 	
 	var response = JSON.parse_string(body.get_string_from_utf8())
-	if not response:
-		print("[AIAgent] %s 的JSON解析失败，使用默认决策" % target_character.name)
-		_execute_default_decision(target_character)
-		return
 	
-	# 使用APIConfig统一解析响应
-	var decision = APIConfig.parse_response(api_manager.current_settings.api_type, response)
+	# 使用安全解析函数
+	var decision = safe_parse_response(api_manager.current_settings.api_type, response, target_character.name)
 	if decision == "":
-		print("[AIAgent] %s 的API响应解析失败，使用默认决策" % target_character.name)
+		print("[AIAgent] %s 的JSON解析失败，使用默认决策" % target_character.name)
 		_execute_default_decision(target_character)
 		return
 	
@@ -680,12 +691,9 @@ func _on_conversation_decision_completed(result, _response_code, headers, body, 
 		return
 	
 	var response = JSON.parse_string(body.get_string_from_utf8())
-	if not response:
-		print("[AIAgent] %s 的聊天决策JSON解析失败" % char_node.name)
-		return
 	
-	# 使用APIConfig统一解析响应
-	var decision = APIConfig.parse_response(api_manager.current_settings.api_type, response)
+	# 使用安全解析函数
+	var decision = safe_parse_response(api_manager.current_settings.api_type, response, char_node.name)
 	if decision == "":
 		print("[AIAgent] %s 的聊天决策API响应解析失败" % char_node.name)
 		return
@@ -760,13 +768,13 @@ func _on_farewell_message_completed(result, _response_code, headers, body, char_
 		return
 	
 	var response = JSON.parse_string(body.get_string_from_utf8())
-	if not response:
+	
+	# 使用安全解析函数
+	var farewell_message = safe_parse_response(api_manager.current_settings.api_type, response, char_node.name)
+	if farewell_message == "":
 		print("[AIAgent] %s 的告别消息JSON解析失败" % char_node.name)
 		_send_farewell_and_end_conversation(char_node, partner_node, "好的，你先去忙其他事情了，回头聊。")
 		return
-	
-	# 使用APIConfig统一解析响应
-	var farewell_message = APIConfig.parse_response(api_manager.current_settings.api_type, response)
 	if farewell_message == "":
 		print("[AIAgent] %s 的告别消息API响应解析失败" % char_node.name)
 		farewell_message = "好的，你先去忙其他事情了，回头聊。"
@@ -969,12 +977,9 @@ func _on_generate_tasks_completed(result, _response_code, headers, body, char_no
 		return
 	
 	var response = JSON.parse_string(body.get_string_from_utf8())
-	if not response:
-		print("[AIAgent] %s 生成任务的JSON解析失败" % target_character.name)
-		return
 	
-	# 解析AI生成的任务内容
-	var task_content = APIConfig.parse_response(api_manager.current_settings.api_type, response)
+	# 使用安全解析函数解析AI生成的任务内容
+	var task_content = safe_parse_response(api_manager.current_settings.api_type, response, target_character.name)
 	if task_content == "":
 		print("[AIAgent] %s 的任务生成API响应解析失败，使用默认任务" % target_character.name)
 		_generate_default_tasks(target_character)
@@ -1093,12 +1098,9 @@ func _on_adjust_tasks_completed(result, _response_code, headers, body, char_node
 		return
 	
 	var response = JSON.parse_string(body.get_string_from_utf8())
-	if not response:
-		print("[AIAgent] %s 调整任务的JSON解析失败" % target_character.name)
-		return
 	
-	# 解析决策
-	var decision = APIConfig.parse_response(api_manager.current_settings.api_type, response)
+	# 使用安全解析函数解析决策
+	var decision = safe_parse_response(api_manager.current_settings.api_type, response, target_character.name)
 	if decision == "":
 		print("[AIAgent] %s 的任务调整API响应解析失败" % target_character.name)
 		return
@@ -1199,12 +1201,9 @@ func _on_continue_task_completed(result, _response_code, headers, body, char_nod
 		return
 	
 	var response = JSON.parse_string(body.get_string_from_utf8())
-	if not response:
-		print("[AIAgent] %s 继续任务的JSON解析失败" % target_character.name)
-		return
 	
-	# 解析决策
-	var decision = APIConfig.parse_response(api_manager.current_settings.api_type, response)
+	# 使用安全解析函数解析决策
+	var decision = safe_parse_response(api_manager.current_settings.api_type, response, target_character.name)
 	if decision == "":
 		print("[AIAgent] %s 的任务调整API响应解析失败" % target_character.name)
 		return
@@ -1283,12 +1282,9 @@ func _on_task_movement_completed(result, _response_code, headers, body, char_nod
 		return
 	
 	var response = JSON.parse_string(body.get_string_from_utf8())
-	if not response:
-		print("[AIAgent] %s 任务移动的JSON解析失败" % target_character.name)
-		return
 	
-	# 解析目标
-	var target_name = APIConfig.parse_response(api_manager.current_settings.api_type, response)
+	# 使用安全解析函数解析目标
+	var target_name = safe_parse_response(api_manager.current_settings.api_type, response, target_character.name)
 	if target_name == "":
 		print("[AIAgent] %s 的任务移动API响应解析失败" % target_character.name)
 		return
@@ -1414,12 +1410,9 @@ func _on_task_conversation_completed(result, _response_code, headers, body, char
 		return
 	
 	var response = JSON.parse_string(body.get_string_from_utf8())
-	if not response:
-		print("[AIAgent] %s 任务对话的JSON解析失败" % target_character.name)
-		return
 	
-	# 解析选择的角色
-	var chosen_name = APIConfig.parse_response(api_manager.current_settings.api_type, response)
+	# 使用安全解析函数解析选择的角色
+	var chosen_name = safe_parse_response(api_manager.current_settings.api_type, response, target_character.name)
 	if chosen_name == "":
 		print("[AIAgent] %s 的任务对话API响应解析失败" % target_character.name)
 		return
@@ -1553,12 +1546,9 @@ func _on_task_thinking_completed(result, _response_code, headers, body, char_nod
 		return
 	
 	var response = JSON.parse_string(body.get_string_from_utf8())
-	if not response:
-		print("[AIAgent] %s 任务思考的JSON解析失败" % target_character.name)
-		return
 	
-	# 解析思考内容
-	var thinking_content = APIConfig.parse_response(api_manager.current_settings.api_type, response)
+	# 使用安全解析函数解析思考内容
+	var thinking_content = safe_parse_response(api_manager.current_settings.api_type, response, target_character.name)
 	if thinking_content == "":
 		print("[AIAgent] %s 的任务思考API响应解析失败" % target_character.name)
 		return
@@ -1614,12 +1604,9 @@ func _on_thinking_request_completed(result, _response_code, headers, body, char_
 		return
 	
 	var response = JSON.parse_string(body.get_string_from_utf8())
-	if not response:
-		print("[AIAgent] %s 的思考内容JSON解析失败" % target_character.name)
-		return
 	
-	# 使用APIConfig统一解析响应
-	var thinking_content = APIConfig.parse_response(api_manager.current_settings.api_type, response)
+	# 使用安全解析函数统一解析响应
+	var thinking_content = safe_parse_response(api_manager.current_settings.api_type, response, target_character.name)
 	if thinking_content == "":
 		print("[AIAgent] %s 的思考内容API响应解析失败" % target_character.name)
 		return
@@ -1917,12 +1904,9 @@ func _on_target_not_found_decision_completed(result, _response_code, headers, bo
 		return
 	
 	var response = JSON.parse_string(body.get_string_from_utf8())
-	if not response:
-		print("[AIAgent] %s 找不到目标决策的JSON解析失败" % target_character.name)
-		return
 	
-	# 解析决策
-	var decision = APIConfig.parse_response(api_manager.current_settings.api_type, response)
+	# 使用安全解析函数解析决策
+	var decision = safe_parse_response(api_manager.current_settings.api_type, response, target_character.name)
 	if decision == "":
 		print("[AIAgent] %s 的找不到目标决策API响应解析失败" % target_character.name)
 		return
@@ -2008,12 +1992,9 @@ func _on_room_choice_completed(result, _response_code, headers, body, char_node 
 		return
 	
 	var response = JSON.parse_string(body.get_string_from_utf8())
-	if not response:
-		print("[AIAgent] %s 房间选择的JSON解析失败" % target_character.name)
-		return
 	
-	# 解析选择
-	var choice = APIConfig.parse_response(api_manager.current_settings.api_type, response)
+	# 使用安全解析函数解析选择
+	var choice = safe_parse_response(api_manager.current_settings.api_type, response, target_character.name)
 	if choice == "":
 		print("[AIAgent] %s 的房间选择API响应解析失败" % target_character.name)
 		return
@@ -2096,12 +2077,9 @@ func _on_reschedule_task_completed(result, _response_code, headers, body, char_n
 		return
 	
 	var response = JSON.parse_string(body.get_string_from_utf8())
-	if not response:
-		print("[AIAgent] %s 重新安排任务的JSON解析失败" % target_character.name)
-		return
 	
-	# 解析新任务
-	var new_task_description = APIConfig.parse_response(api_manager.current_settings.api_type, response)
+	# 使用安全解析函数解析新任务
+	var new_task_description = safe_parse_response(api_manager.current_settings.api_type, response, target_character.name)
 	if new_task_description == "":
 		print("[AIAgent] %s 的重新安排任务API响应解析失败" % target_character.name)
 		return

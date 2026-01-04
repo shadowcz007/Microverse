@@ -29,6 +29,10 @@ var direction_stability_timer = 0.0  # 方向稳定计时器
 func _ready():
 	add_to_group("controllable_characters")
 	
+	# 设置角色的基础 z_index，确保角色在合理层级（不会被其他物体遮挡）
+	# 使用 1 作为基础值，确保角色在大多数物体之上
+	z_index = 1
+	
 	# 创建ChatHistory节点
 	if not has_node("ChatHistory"):
 		var chat_history_scene = load("res://scene/ChatHistory.tscn")
@@ -355,8 +359,8 @@ func stand_up_from_chair():
 		is_sitting = false
 		current_chair = null
 		
-		# 重置Z轴顺序
-		z_index = 0
+		# 重置Z轴顺序 - 使用合理的基础值，确保角色可见
+		z_index = 1
 		
 		# 根据之前的坐姿选择站起动画
 		var anim_name = "stand_" + facing_direction

@@ -68,13 +68,21 @@ func update_ui():
 	# 更新模型选项
 	model_option.clear()
 	var models = SettingsManager.get_models_for_api(current_settings.api_type)
-	for model in models:
-		model_option.add_item(model)
-	
-	# 选择当前模型
-	var model_index = models.find(current_settings.model)
-	if model_index >= 0:
-		model_option.select(model_index)
+	if models.size() > 0:
+		for model in models:
+			model_option.add_item(model)
+		
+		# 选择当前模型
+		var model_index = models.find(current_settings.model)
+		if model_index >= 0:
+			model_option.select(model_index)
+		else:
+			# 如果当前模型不在列表中，选择第一个
+			model_option.select(0)
+	else:
+		# 如果模型列表为空，添加一个占位项
+		model_option.add_item("请手动输入模型名称")
+		model_option.select(0)
 	
 	# 设置API Key
 	api_key_input.text = current_settings.api_key
@@ -94,7 +102,13 @@ func _on_api_type_selected(index):
 	current_settings.api_type = SettingsManager.api_types[index]
 	# 重置模型选择
 	var models = SettingsManager.get_models_for_api(current_settings.api_type)
-	current_settings.model = models[0]
+	# 检查模型列表是否为空
+	if models.size() > 0:
+		current_settings.model = models[0]
+	else:
+		# 如果模型列表为空（如 OpenAICompatible），使用空字符串或默认值
+		current_settings.model = ""
+		print("[GlobalSettingsUI] 警告：%s 没有可用的模型列表，请手动输入模型名称" % current_settings.api_type)
 	update_ui()
 
 # 初始化窗口模式与分辨率选项

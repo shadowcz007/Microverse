@@ -201,6 +201,17 @@ func _on_request_completed(result, response_code, headers, body):
 	var response = JSON.parse_string(body.get_string_from_utf8())
 	var dialog_text = ""
 	
+	# 检查响应类型和有效性
+	if not response:
+		print("[对话系统] JSON解析失败：响应为空")
+		return
+	
+	# 确保response是Dictionary类型
+	if not (response is Dictionary):
+		print("[对话系统] JSON解析失败：响应不是Dictionary类型，而是 ", typeof(response))
+		print("[对话系统] 响应内容：", response)
+		return
+	
 	# 获取设置
 	var settings_manager = null
 	var main_loop = Engine.get_main_loop() as SceneTree
